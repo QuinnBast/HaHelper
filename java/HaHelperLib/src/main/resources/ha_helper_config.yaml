@@ -1,0 +1,17 @@
+local:
+  hostname: localhost
+  port: 9999
+cluster:
+  clusterSize: 3
+  multiMaster: false
+  storage:
+    fileBasedConfig:
+      enabled: false
+    memoryBasedConfig:
+      enabled: true
+  discoveryMethod:
+    knownHosts:
+      - hostname: localhost
+        port: 9998
+      - hostname: localhost
+        port: 9997

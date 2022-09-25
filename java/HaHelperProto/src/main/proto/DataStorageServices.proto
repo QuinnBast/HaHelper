@@ -1,0 +1,23 @@
+syntax = "proto3";
+package com.bast.quinn.hahelper.grpc.data;
+option java_outer_classname = "HaHelper";
+option java_multiple_files = true;
+
+service DataStorageServices {
+  rpc Put(PutRequest) returns (PutResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc Watch(WatchRequest) returns (stream WatchEvent);
+}
+
+message PutRequest {}
+message PutResponse {}
+
+message GetRequest {}
+message GetResponse {}
+
+message DeleteRequest {}
+message DeleteResponse {}
+
+message WatchRequest {}
+message WatchEvent {}

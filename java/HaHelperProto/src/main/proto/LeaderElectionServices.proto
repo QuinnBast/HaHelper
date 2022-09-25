@@ -1,0 +1,22 @@
+syntax = "proto3";
+package com.bast.quinn.hahelper.grpc.leader;
+option java_outer_classname = "HaHelper";
+option java_multiple_files = true;
+
+service LeaderService {
+  rpc ElectLeader(ElectLeaderRequest) returns (ElectLeaderResponse);
+  rpc LeaderDecided(LeaderDecidedRequest) returns (LeaderDecidedResponse);
+  rpc Heartbeat(stream HeartbeatMessage) returns (stream HeartbeatMessage);
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+message ElectLeaderRequest {}
+message ElectLeaderResponse {}
+
+message LeaderDecidedRequest {}
+message LeaderDecidedResponse {}
+
+message PingRequest {}
+message PingResponse {}
+
+message HeartbeatMessage {}
