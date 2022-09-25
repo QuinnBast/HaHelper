@@ -12,7 +12,6 @@ import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.util.*
-import kotlin.math.floor
 
 class HaHelperClient(
     private val serverConfig: HaHelperServerConfig,
@@ -27,7 +26,7 @@ class HaHelperClient(
     }
 
     private val leaderElectionStubs = serverConfig.cluster.discoveryMethod.knownHosts
-        ?.filter { serverConfig.local != it }
+        ?.filter { serverConfig.serverPort != it.port && it.hostname.lowercase(Locale.getDefault()) != "localhost" }
         ?.map {
         LeaderServiceGrpcKt.LeaderServiceCoroutineStub(
             ManagedChannelBuilder
@@ -68,7 +67,7 @@ class HaHelperClient(
         val leaderState = mutableLeaderState.getImmutableState()
 
         val votes = 1 + (requestVotes(leaderState)?.count { it != null && it.isVoting } ?: 0)
-        val quorum = (floor(serverConfig.cluster.clusterSize / 2.0) + 1).toInt()
+        val quorum = serverConfig.cluster.getQuorum()
 
         if(votes >= quorum) {
             logger.info("Got $votes / $quorum votes in term ${leaderState.electionTerm}. I am the leader (${leaderState.memberId}).")

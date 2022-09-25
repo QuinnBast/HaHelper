@@ -2,13 +2,13 @@ package com.bast.quinn.hahelper
 
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addFileSource
-import com.sksamuel.hoplite.addResourceSource
 import org.slf4j.LoggerFactory
 import java.io.File
 
 data class HaHelperServerConfig(
-    val local: Host,
+    val serverPort: Int,
     val cluster: ClusterConfig,
+    val persistence: PersistenceConfig,
 ) {
 
     companion object {
@@ -38,9 +38,10 @@ data class HaHelperServerConfig(
 data class ClusterConfig(
     val clusterSize: Int,
     val multiMaster: Boolean,
-    val storage: DataStorageConfig,
     val discoveryMethod: DiscoveryMethod,
-)
+) {
+    fun getQuorum() = kotlin.math.floor(clusterSize / 2.0) + 1
+}
 
 data class DiscoveryMethod(
     val knownHosts: List<Host>?,
@@ -56,22 +57,9 @@ data class Host(
     val port: Int,
 )
 
-data class DataStorageConfig(
-    val fileBasedConfig: FileStorageConfig,
-    val memoryBasedConfig: InMemoryConfig,
-) {
-    init {
-        require(fileBasedConfig.enabled || memoryBasedConfig.enabled)
-    }
-}
-
-data class FileStorageConfig(
+data class PersistenceConfig(
     val enabled: Boolean,
+    val replicas: Int?,
     val storageLocation: String?,
-    val compression: Boolean?,
     val compactionIntervalSeconds: Long?, // 0 Means no log compaction
-)
-
-data class InMemoryConfig(
-    val enabled: Boolean
 )

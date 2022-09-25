@@ -21,7 +21,7 @@ class HaHelper(
 
         val state = LeaderStateMutable(memberId)
 
-        HaHelperServer(config.local, state).start()
+        HaHelperServer(config.serverPort, state).start()
         HaHelperClient(config, state).startClient()
     }
 

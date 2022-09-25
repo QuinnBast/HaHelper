@@ -1,13 +1,12 @@
 package com.bast.quinn.hahelper.server
 
 import com.bast.quinn.hahelper.HaHelper
-import com.bast.quinn.hahelper.Host
 import com.bast.quinn.hahelper.model.LeaderStateMutable
 import io.grpc.ServerBuilder
 import org.slf4j.LoggerFactory
 
 class HaHelperServer(
-    private val localHostConfig: Host,
+    private val port: Int,
     private val leaderState: LeaderStateMutable,
 ) {
 
@@ -16,8 +15,8 @@ class HaHelperServer(
     }
 
     fun start() {
-        logger.info("Starting server at ${localHostConfig.hostname}:${localHostConfig.port}")
-        ServerBuilder.forPort(localHostConfig.port)
+        logger.info("Starting server on $port")
+        ServerBuilder.forPort(port)
             .addService(LeaderServices(leaderState))
             .addService(DataServices())
             .build()
