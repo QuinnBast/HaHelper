@@ -13,7 +13,7 @@ class LeaderServices(
     }
 
     override suspend fun requestVote(request: VoteRequest): VoteResponse {
-        val leaderState = leaderStateMutable.getState()
+        val leaderState = leaderStateMutable.getImmutableState()
         return if(leaderState.hasVotedInTerm(request.electionTerm)) {
             VoteResponse.newBuilder().setIsVoting(false).build()
         } else {
@@ -24,7 +24,7 @@ class LeaderServices(
     }
 
     override suspend fun heartbeat(request: HeartbeatRequest): HeartbeatResponse {
-        val leaderState = leaderStateMutable.getState()
+        val leaderState = leaderStateMutable.getImmutableState()
         if(!leaderState.hasLeader() || leaderState.electionTerm < request.term) {
             // Update the leader
             leaderStateMutable.setLeader(request.leaderId, request.term)

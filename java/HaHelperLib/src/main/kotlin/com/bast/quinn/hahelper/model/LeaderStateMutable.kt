@@ -3,7 +3,7 @@ package com.bast.quinn.hahelper.model
 import java.util.*
 
 class LeaderStateMutable(
-    val memberId: String,
+    private val memberId: String,
     private var electionTerm: Long = 0L,
     var leaderId: String = "",
     var raftState: RaftState = RaftState.FOLLOWER,
@@ -14,17 +14,17 @@ class LeaderStateMutable(
         private val ELECTION_TIMER_DELAY = 200 + Random(System.currentTimeMillis()).nextInt(300)
     }
 
-    fun getState() = LeaderState(memberId, electionTerm, leaderId, raftState, lastHeartbeat)
+    fun getImmutableState() = ImmutableLeaderState(memberId, electionTerm, leaderId, raftState, lastHeartbeat)
 
     fun newElectionTerm() {
         electionTerm += 1
     }
 
     fun setLeader(leader: String, term: Long) {
-        if(leader == memberId) {
-            raftState = RaftState.LEADER
+        raftState = if(leader == memberId) {
+            RaftState.LEADER
         } else {
-            raftState = RaftState.FOLLOWER
+            RaftState.FOLLOWER
         }
         lastHeartbeat = System.currentTimeMillis()
         electionTerm = term
@@ -47,7 +47,7 @@ enum class RaftState {
     FOLLOWER, LEADER
 }
 
-data class LeaderState(
+data class ImmutableLeaderState(
     val memberId: String,
     val electionTerm: Long = 0L,
     val leaderId: String = "",

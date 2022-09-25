@@ -5,7 +5,7 @@ import com.bast.quinn.hahelper.HaHelperServerConfig
 import com.bast.quinn.hahelper.grpc.leader.HeartbeatRequest
 import com.bast.quinn.hahelper.grpc.leader.LeaderServiceGrpcKt
 import com.bast.quinn.hahelper.grpc.leader.VoteRequest
-import com.bast.quinn.hahelper.model.LeaderState
+import com.bast.quinn.hahelper.model.ImmutableLeaderState
 import com.bast.quinn.hahelper.model.LeaderStateMutable
 import com.bast.quinn.hahelper.model.RaftState
 import io.grpc.ManagedChannelBuilder
@@ -43,37 +43,12 @@ class HaHelperClient(
         startHeartbeatThreadAsync()
     }
 
-    private suspend fun requestVotes(leaderState: LeaderState) = leaderElectionStubs?.map {
-        kotlin.runCatching {
-            it.requestVote(
-                VoteRequest
-                    .newBuilder()
-                    .setElectionTerm(leaderState.electionTerm)
-                    .setLeaderId(leaderState.memberId)
-                    .build()
-            )
-        }.getOrNull()
-    }
-
-    private suspend fun sendHeartBeats(leaderState: LeaderState) = leaderElectionStubs?.map {
-        kotlin.runCatching {
-            mutableLeaderState.setHeartbeat()
-            it.heartbeat(
-                HeartbeatRequest.newBuilder()
-                    .setLeaderId(leaderState.memberId)
-                    .setClusterId(1)
-                    .setTerm(leaderState.electionTerm)
-                    .build()
-            )
-        }.getOrNull()
-    }
-
     private fun startHeartbeatThreadAsync() = scope.launch {
         logger.info("Starting heartbeat thread...")
         while(true) {
             delay(HEARTBEAT_DELAY_MS)
             if (mutableLeaderState.raftState == RaftState.LEADER) {
-                sendHeartBeats(mutableLeaderState.getState())
+                sendHeartbeats(mutableLeaderState.getImmutableState())
             }
         }
     }
@@ -83,17 +58,47 @@ class HaHelperClient(
         while(true) {
             delay(HEARTBEAT_DELAY_MS + random.nextInt(300).toLong())
             if(mutableLeaderState.shouldStartElection()) {
-                mutableLeaderState.newElectionTerm()
-                val leaderState = mutableLeaderState.getState()
-                val responses = requestVotes(leaderState)
-                val votes = 1 + (responses?.count { it != null && it.isVoting } ?: 0)
-                val quorum = (floor(serverConfig.cluster.clusterSize / 2.0) + 1).toInt()
-                if(votes >= quorum) {
-                    mutableLeaderState.setLeader(leaderState.memberId, leaderState.electionTerm)
-                    logger.info("Got $votes / $quorum votes in term ${leaderState.electionTerm}. I am the leader (${leaderState.memberId}).")
-                    sendHeartBeats(leaderState)
-                }
+                performElection()
             }
         }
+    }
+
+    private suspend fun performElection() {
+        mutableLeaderState.newElectionTerm()
+        val leaderState = mutableLeaderState.getImmutableState()
+
+        val votes = 1 + (requestVotes(leaderState)?.count { it != null && it.isVoting } ?: 0)
+        val quorum = (floor(serverConfig.cluster.clusterSize / 2.0) + 1).toInt()
+
+        if(votes >= quorum) {
+            logger.info("Got $votes / $quorum votes in term ${leaderState.electionTerm}. I am the leader (${leaderState.memberId}).")
+            mutableLeaderState.setLeader(leaderState.memberId, leaderState.electionTerm)
+            sendHeartbeats(leaderState)
+        }
+    }
+
+    private suspend fun requestVotes(immutableLeaderState: ImmutableLeaderState) = leaderElectionStubs?.map {
+        kotlin.runCatching {
+            it.requestVote(
+                VoteRequest
+                    .newBuilder()
+                    .setElectionTerm(immutableLeaderState.electionTerm)
+                    .setLeaderId(immutableLeaderState.memberId)
+                    .build()
+            )
+        }.getOrNull()
+    }
+
+    private suspend fun sendHeartbeats(immutableLeaderState: ImmutableLeaderState) = leaderElectionStubs?.map {
+        kotlin.runCatching {
+            mutableLeaderState.setHeartbeat()
+            it.heartbeat(
+                HeartbeatRequest.newBuilder()
+                    .setLeaderId(immutableLeaderState.memberId)
+                    .setClusterId(1)
+                    .setTerm(immutableLeaderState.electionTerm)
+                    .build()
+            )
+        }.getOrNull()
     }
 }
