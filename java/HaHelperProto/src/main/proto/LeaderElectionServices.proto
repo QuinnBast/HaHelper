@@ -4,19 +4,46 @@ option java_outer_classname = "HaHelper";
 option java_multiple_files = true;
 
 service LeaderService {
-  rpc ElectLeader(ElectLeaderRequest) returns (ElectLeaderResponse);
-  rpc LeaderDecided(LeaderDecidedRequest) returns (LeaderDecidedResponse);
-  rpc Heartbeat(stream HeartbeatMessage) returns (stream HeartbeatMessage);
+
+  /**
+   * If a service has not heard from a leader on the heartbeat RPC, a client can request to become the leader.
+   */
+  rpc RequestVote(VoteRequest) returns (VoteResponse);
+
+  /**
+   * Heartbeats should only be requested from clients if you are the leader.
+   * If a service gets a heartbeat request, it should assume that there is a leader elected.
+   *   - Unless the heartbeat is from a leader which is in a more recent term.
+   */
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
   rpc Ping(PingRequest) returns (PingResponse);
 }
 
-message ElectLeaderRequest {}
-message ElectLeaderResponse {}
+message ResponseHeader {
+  uint64 clusterId = 1;
+  string memberId = 2;
+  int64 revision = 3;
+  uint64 term = 4;
+}
 
-message LeaderDecidedRequest {}
-message LeaderDecidedResponse {}
+message VoteRequest {
+  int64 electionTerm = 1;
+  string leaderId = 2;
+}
+
+message VoteResponse {
+  bool isVoting = 1;
+}
 
 message PingRequest {}
 message PingResponse {}
 
-message HeartbeatMessage {}
+message HeartbeatRequest {
+  uint64 clusterId = 1;
+  string leaderId = 2;
+  uint64 term = 3;
+}
+
+message HeartbeatResponse {
+
+}

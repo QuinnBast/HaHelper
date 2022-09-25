@@ -13,17 +13,18 @@ data class HaHelperServerConfig(
 
     companion object {
 
-        private const val envVarName: String = "HA_HELPER_CONFIG_PATH"
-        private const val defaultConfigFileName: String = "/ha_helper_config.yaml"
+        private const val ENVIRONMENT_VARIABLE_NAME: String = "HA_HELPER_CONFIG_PATH"
+        private const val DEFAULT_CONFIG_FILENAME: String = "/ha_helper_config.yaml"
+        private const val DEFAULT_CONFIG_PATH: String = "./config/$DEFAULT_CONFIG_FILENAME"
         private val logger = LoggerFactory.getLogger(HaHelperServerConfig::class.java)
 
         fun load(absolutePath: String = ".yaml") : HaHelperServerConfig {
-            val path = System.getenv(envVarName) ?: ".yaml"
+            val path = System.getenv(ENVIRONMENT_VARIABLE_NAME) ?: ".yaml"
 
              val config = ConfigLoaderBuilder.default()
                  .addFileSource(File(path), optional = true)
+                 .addFileSource(File(DEFAULT_CONFIG_PATH), optional = true)
                  .addFileSource(File(absolutePath), optional = true)
-                 .addResourceSource(defaultConfigFileName)
                  .build()
                  .loadConfigOrThrow<HaHelperServerConfig>()
 

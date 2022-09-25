@@ -1,6 +1,6 @@
 local:
   hostname: localhost
-  port: 9999
+  port: 9998
 cluster:
   clusterSize: 3
   multiMaster: false
@@ -15,3 +15,5 @@ cluster:
         port: 9998
       - hostname: localhost
         port: 9997
+      - hostname: localhost
+        port: 9996

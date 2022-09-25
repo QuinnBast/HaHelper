@@ -1,52 +1,40 @@
 package com.bast.quinn.hahelper.server
 
 import com.bast.quinn.hahelper.grpc.leader.*
-import com.bast.quinn.hahelper.grpc.leader.LeaderServiceGrpc.LeaderServiceImplBase
-import io.grpc.stub.StreamObserver
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
+import com.bast.quinn.hahelper.model.LeaderStateMutable
+import org.slf4j.LoggerFactory
 
 class LeaderServices(
-    private val myId: String
+    private val leaderStateMutable: LeaderStateMutable,
 ) : LeaderServiceGrpcKt.LeaderServiceCoroutineImplBase() {
 
     companion object {
-        val scope = CoroutineScope(Dispatchers.IO)
+        private val logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    private val leaderId: String = ""
-    private val isElectingSelf = false
-
-    // The amount of time to elapse before attempting to elect itself the leader
-    val electionTimer: Long = 0
-
-    fun amILeader() = leaderId == myId
-
-    override suspend fun electLeader(request: ElectLeaderRequest): ElectLeaderResponse {
-        if(leaderId != "") {
-            // A leader is already elected, don't vote for the new leader
+    override suspend fun requestVote(request: VoteRequest): VoteResponse {
+        val leaderState = leaderStateMutable.getState()
+        return if(leaderState.hasVotedInTerm(request.electionTerm)) {
+            VoteResponse.newBuilder().setIsVoting(false).build()
+        } else {
+            logger.info("Voting for ${request.leaderId} in term ${request.electionTerm}")
+            leaderStateMutable.setTerm(request.electionTerm)
+            VoteResponse.newBuilder().setIsVoting(true).build()
         }
-        // Elect the incoming person as the leader
-        return ElectLeaderResponse.getDefaultInstance()
     }
 
-    override suspend fun leaderDecided(request: LeaderDecidedRequest): LeaderDecidedResponse {
-        return LeaderDecidedResponse.getDefaultInstance()
-    }
-
-    override fun heartbeat(requests: Flow<HeartbeatMessage>): Flow<HeartbeatMessage> {
-        return flow {
-            requests.collect {
-                emit(HeartbeatMessage.getDefaultInstance())
-            }
+    override suspend fun heartbeat(request: HeartbeatRequest): HeartbeatResponse {
+        val leaderState = leaderStateMutable.getState()
+        if(!leaderState.hasLeader() || leaderState.electionTerm < request.term) {
+            // Update the leader
+            leaderStateMutable.setLeader(request.leaderId, request.term)
+            logger.info("Got heartbeat from a leader in term ${request.term}, updating leader to ${request.leaderId}")
         }
+        leaderStateMutable.setHeartbeat()
+        return HeartbeatResponse.getDefaultInstance()
     }
 
     override suspend fun ping(request: PingRequest): PingResponse {
         return PingResponse.getDefaultInstance()
     }
-
 }

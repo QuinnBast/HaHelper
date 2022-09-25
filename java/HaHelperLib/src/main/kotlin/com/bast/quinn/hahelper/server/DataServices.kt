@@ -3,9 +3,7 @@ package com.bast.quinn.hahelper.server
 import com.bast.quinn.hahelper.grpc.data.*
 import kotlinx.coroutines.flow.Flow
 
-class DataServices(
-    private val leaderServices: LeaderServices
-) : DataStorageServicesGrpcKt.DataStorageServicesCoroutineImplBase() {
+class DataServices() : DataStorageServicesGrpcKt.DataStorageServicesCoroutineImplBase() {
 
     override suspend fun put(request: PutRequest): PutResponse {
         return super.put(request)
