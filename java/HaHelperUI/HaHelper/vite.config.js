@@ -14,7 +14,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: "../../HaHelperWeb/src/main/resources",
+    outDir: "../../HaHelperWebServer/src/main/resources",
     emptyOutDir: true,
   }
 })

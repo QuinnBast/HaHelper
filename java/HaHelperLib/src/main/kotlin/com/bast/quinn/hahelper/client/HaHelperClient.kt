@@ -50,7 +50,12 @@ class HaHelperClient(
         while(true) {
             delay(HEARTBEAT_DELAY_MS)
             if (mutableLeaderState.raftState == RaftState.LEADER) {
-                sendHeartbeats(mutableLeaderState.getImmutableState())
+                val responses = sendHeartbeats(mutableLeaderState.getImmutableState()).filter{ it != null }
+
+                // If you are the leader, but don't get any heartbeat responses, you ain't a leader no mo'!
+                if(1 + responses.count() < serverConfig.cluster.getQuorum()) {
+                    performElection()
+                }
             }
         }
     }

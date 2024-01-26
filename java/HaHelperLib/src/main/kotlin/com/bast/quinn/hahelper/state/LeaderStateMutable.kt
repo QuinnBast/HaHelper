@@ -25,7 +25,10 @@ class LeaderStateMutable(
     }
 
     fun setLeader(leader: String, term: Long) {
-        electionState = if(leader != "") {
+        electionTerm = term
+        leaderId = leader
+        lastHeartbeat = System.currentTimeMillis()
+        electionState = if(leader == "") {
             ElectionState.IN_ELECTION
         } else {
             ElectionState.IN_CLUSTER
@@ -36,9 +39,6 @@ class LeaderStateMutable(
         } else {
             RaftState.FOLLOWER
         }
-        lastHeartbeat = System.currentTimeMillis()
-        electionTerm = term
-        leaderId = leader
     }
 
     fun setTerm(term: Long) {

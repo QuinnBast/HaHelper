@@ -1,4 +1,4 @@
-serverPort: 9998
+serverPort: 9997
 persistence:
   enabled: false
 # replicas: 1
