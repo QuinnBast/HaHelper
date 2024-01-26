@@ -1,14 +1,15 @@
-serverPort: 9998
+serverPort: 9997
 persistence:
   enabled: false
+# replicas: 1
+# storageLocation:
+# compactionIntervalSeconds:
 cluster:
-  clusterSize: 3
   multiMaster: false
-  discoveryMethod:
-    knownHosts:
-      - hostname: localhost
-        port: 9998
-      - hostname: localhost
-        port: 9997
-      - hostname: localhost
-        port: 9996
+  knownHosts:
+    - hostname: localhost
+      port: 9998
+    - hostname: localhost
+      port: 9997
+    - hostname: localhost
+      port: 9996

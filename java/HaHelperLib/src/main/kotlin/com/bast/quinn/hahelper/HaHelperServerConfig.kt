@@ -36,20 +36,10 @@ data class HaHelperServerConfig(
 }
 
 data class ClusterConfig(
-    val clusterSize: Int,
     val multiMaster: Boolean,
-    val discoveryMethod: DiscoveryMethod,
+    val knownHosts: List<Host>,
 ) {
-    fun getQuorum() = kotlin.math.floor(clusterSize / 2.0) + 1
-}
-
-data class DiscoveryMethod(
-    val knownHosts: List<Host>?,
-    val domainDiscovery: List<String>?,
-) {
-    init {
-        require(!knownHosts.isNullOrEmpty() || !domainDiscovery.isNullOrEmpty())
-    }
+    fun getQuorum() = kotlin.math.floor(knownHosts.size / 2.0) + 1
 }
 
 data class Host(

@@ -18,6 +18,7 @@ class HaHelper(
 
     fun start() {
         logger.info("Attempting to start server...")
+        logger.info("Started as member {}", memberId)
 
         val state = LeaderStateMutable(memberId)
 

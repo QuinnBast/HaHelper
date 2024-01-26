@@ -2,6 +2,7 @@ package com.bast.quinn.hahelper.client
 
 import com.bast.quinn.hahelper.HaHelper
 import com.bast.quinn.hahelper.HaHelperServerConfig
+import com.bast.quinn.hahelper.Host
 import com.bast.quinn.hahelper.grpc.leader.HeartbeatRequest
 import com.bast.quinn.hahelper.grpc.leader.LeaderServiceGrpcKt
 import com.bast.quinn.hahelper.grpc.leader.VoteRequest
@@ -11,6 +12,7 @@ import com.bast.quinn.hahelper.model.RaftState
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
+import java.net.InetAddress
 import java.util.*
 
 class HaHelperClient(
@@ -25,25 +27,29 @@ class HaHelperClient(
         private val random = Random(System.currentTimeMillis())
     }
 
-    private val leaderElectionStubs = serverConfig.cluster.discoveryMethod.knownHosts
-        ?.filter { serverConfig.serverPort != it.port && it.hostname.lowercase(Locale.getDefault()) != "localhost" }
-        ?.map {
-        LeaderServiceGrpcKt.LeaderServiceCoroutineStub(
-            ManagedChannelBuilder
-                .forAddress(it.hostname, it.port)
-                .usePlaintext()
-                .build()
+    private val leaderElectionStubs = serverConfig.cluster.knownHosts
+        .filter { !isMyself(it) }
+        .map {
+            logger.info("Creating a client to {}:{}", it.hostname, it.port)
+            LeaderServiceGrpcKt.LeaderServiceCoroutineStub(
+                ManagedChannelBuilder
+                    .forAddress(it.hostname, it.port)
+                    .usePlaintext()
+                    .build()
         )
     }
 
+    private fun isMyself(it: Host) =
+        serverConfig.serverPort == it.port && (it.hostname.lowercase(Locale.getDefault()) == "localhost" || it.hostname == InetAddress.getLocalHost().hostAddress || it.hostname == InetAddress.getLocalHost().hostName)
+
     fun startClient() = runBlocking {
         logger.info("Attempting to discover a cluster...")
+        logger.info("Required quorum: {}", serverConfig.cluster.getQuorum())
         startElectionTermThreadAsync()
         startHeartbeatThreadAsync()
     }
 
     private fun startHeartbeatThreadAsync() = scope.launch {
-        logger.info("Starting heartbeat thread...")
         while(true) {
             delay(HEARTBEAT_DELAY_MS)
             if (mutableLeaderState.raftState == RaftState.LEADER) {
@@ -53,7 +59,6 @@ class HaHelperClient(
     }
 
     private fun startElectionTermThreadAsync() = scope.launch {
-        logger.info("Starting thread to manage elections...")
         while(true) {
             delay(HEARTBEAT_DELAY_MS + random.nextInt(300).toLong())
             if(mutableLeaderState.shouldStartElection()) {
@@ -63,6 +68,11 @@ class HaHelperClient(
     }
 
     private suspend fun performElection() {
+        if(mutableLeaderState.getImmutableState().hasLeader()) {
+            logger.info("Lost quorum. Starting new election.")
+            mutableLeaderState.setLeader("", 0)
+        }
+
         mutableLeaderState.newElectionTerm()
         val leaderState = mutableLeaderState.getImmutableState()
 
@@ -73,10 +83,14 @@ class HaHelperClient(
             logger.info("Got $votes / $quorum votes in term ${leaderState.electionTerm}. I am the leader (${leaderState.memberId}).")
             mutableLeaderState.setLeader(leaderState.memberId, leaderState.electionTerm)
             sendHeartbeats(leaderState)
+        } else {
+            if(leaderState.electionTerm.toInt() % 200 == 0) {
+                logger.info("Waiting for majority. Cluster quorum not met. Term {}", leaderState.electionTerm)
+            }
         }
     }
 
-    private suspend fun requestVotes(immutableLeaderState: ImmutableLeaderState) = leaderElectionStubs?.map {
+    private suspend fun requestVotes(immutableLeaderState: ImmutableLeaderState) = leaderElectionStubs.map {
         kotlin.runCatching {
             it.requestVote(
                 VoteRequest
@@ -88,7 +102,7 @@ class HaHelperClient(
         }.getOrNull()
     }
 
-    private suspend fun sendHeartbeats(immutableLeaderState: ImmutableLeaderState) = leaderElectionStubs?.map {
+    private suspend fun sendHeartbeats(immutableLeaderState: ImmutableLeaderState) = leaderElectionStubs.map {
         kotlin.runCatching {
             mutableLeaderState.setHeartbeat()
             it.heartbeat(

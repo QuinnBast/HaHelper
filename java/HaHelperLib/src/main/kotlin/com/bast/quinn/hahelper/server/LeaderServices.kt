@@ -14,6 +14,7 @@ class LeaderServices(
 
     override suspend fun requestVote(request: VoteRequest): VoteResponse {
         val leaderState = leaderStateMutable.getImmutableState()
+
         return if(leaderState.hasVotedInTerm(request.electionTerm)) {
             VoteResponse.newBuilder().setIsVoting(false).build()
         } else {
