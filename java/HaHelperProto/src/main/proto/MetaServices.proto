@@ -1,0 +1,20 @@
+syntax = "proto3";
+package com.bast.quinn.hahelper.grpc.meta;
+option java_outer_classname = "HaHelper";
+option java_multiple_files = true;
+
+import "LeaderElectionServices.proto";
+
+service MetaService {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+message GetStatusRequest {}
+message GetStatusResponse {
+  uint64 clusterId = 1;
+  string memberId = 2;
+  uint64 term = 3;
+  string currentLeader = 4;
+  leader.RaftState raftState = 5;
+  leader.ElectionState electionState = 6;
+}

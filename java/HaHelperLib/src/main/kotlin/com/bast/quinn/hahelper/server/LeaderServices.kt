@@ -1,7 +1,7 @@
 package com.bast.quinn.hahelper.server
 
 import com.bast.quinn.hahelper.grpc.leader.*
-import com.bast.quinn.hahelper.model.LeaderStateMutable
+import com.bast.quinn.hahelper.state.LeaderStateMutable
 import org.slf4j.LoggerFactory
 
 class LeaderServices(

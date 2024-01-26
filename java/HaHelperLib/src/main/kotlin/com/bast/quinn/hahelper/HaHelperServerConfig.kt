@@ -36,6 +36,7 @@ data class HaHelperServerConfig(
 }
 
 data class ClusterConfig(
+    val clusterId: Int,
     val multiMaster: Boolean,
     val knownHosts: List<Host>,
 ) {

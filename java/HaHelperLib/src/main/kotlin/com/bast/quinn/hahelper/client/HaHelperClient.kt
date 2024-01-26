@@ -3,12 +3,9 @@ package com.bast.quinn.hahelper.client
 import com.bast.quinn.hahelper.HaHelper
 import com.bast.quinn.hahelper.HaHelperServerConfig
 import com.bast.quinn.hahelper.Host
-import com.bast.quinn.hahelper.grpc.leader.HeartbeatRequest
-import com.bast.quinn.hahelper.grpc.leader.LeaderServiceGrpcKt
-import com.bast.quinn.hahelper.grpc.leader.VoteRequest
-import com.bast.quinn.hahelper.model.ImmutableLeaderState
-import com.bast.quinn.hahelper.model.LeaderStateMutable
-import com.bast.quinn.hahelper.model.RaftState
+import com.bast.quinn.hahelper.grpc.leader.*
+import com.bast.quinn.hahelper.state.ImmutableLeaderState
+import com.bast.quinn.hahelper.state.LeaderStateMutable
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
@@ -68,7 +65,7 @@ class HaHelperClient(
     }
 
     private suspend fun performElection() {
-        if(mutableLeaderState.getImmutableState().hasLeader()) {
+        if(mutableLeaderState.electionState == ElectionState.IN_CLUSTER) {
             logger.info("Lost quorum. Starting new election.")
             mutableLeaderState.setLeader("", 0)
         }
@@ -76,7 +73,7 @@ class HaHelperClient(
         mutableLeaderState.newElectionTerm()
         val leaderState = mutableLeaderState.getImmutableState()
 
-        val votes = 1 + (requestVotes(leaderState)?.count { it != null && it.isVoting } ?: 0)
+        val votes = 1 + (requestVotes(leaderState).count { it != null && it.isVoting } ?: 0)
         val quorum = serverConfig.cluster.getQuorum()
 
         if(votes >= quorum) {
@@ -108,7 +105,7 @@ class HaHelperClient(
             it.heartbeat(
                 HeartbeatRequest.newBuilder()
                     .setLeaderId(immutableLeaderState.memberId)
-                    .setClusterId(1)
+                    .setClusterId(serverConfig.cluster.clusterId.toLong())
                     .setTerm(immutableLeaderState.electionTerm)
                     .build()
             )

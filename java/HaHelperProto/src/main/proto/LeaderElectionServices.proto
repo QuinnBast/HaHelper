@@ -44,6 +44,16 @@ message HeartbeatRequest {
   uint64 term = 3;
 }
 
-message HeartbeatResponse {
+message HeartbeatResponse {}
 
+enum RaftState {
+  RAFT_STATE_UNKNOWN = 0;
+  FOLLOWER = 1;
+  LEADER = 2;
+}
+
+enum ElectionState {
+  ELECTION_STATE_UNKNOWN = 0;
+  IN_ELECTION = 1;
+  IN_CLUSTER = 2;
 }

@@ -1,10 +1,11 @@
-serverPort: 9997
+serverPort: 9998
 persistence:
   enabled: false
 # replicas: 1
 # storageLocation:
 # compactionIntervalSeconds:
 cluster:
+  clusterId: 1
   multiMaster: false
   knownHosts:
     - hostname: localhost

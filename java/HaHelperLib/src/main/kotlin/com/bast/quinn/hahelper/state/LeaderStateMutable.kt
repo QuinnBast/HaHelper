@@ -1,26 +1,36 @@
-package com.bast.quinn.hahelper.model
+package com.bast.quinn.hahelper.state
 
+import com.bast.quinn.hahelper.grpc.leader.ElectionState
+import com.bast.quinn.hahelper.grpc.leader.RaftState
 import java.util.*
 
 class LeaderStateMutable(
+    private val clusterId: Int,
     private val memberId: String,
     private var electionTerm: Long = 0L,
     var leaderId: String = "",
     var raftState: RaftState = RaftState.FOLLOWER,
-    var lastHeartbeat: Long = System.currentTimeMillis()
+    var lastHeartbeat: Long = System.currentTimeMillis(),
+    var electionState: ElectionState = ElectionState.IN_ELECTION,
 ) {
 
     companion object {
         private val ELECTION_TIMER_DELAY = 200 + Random(System.currentTimeMillis()).nextInt(300)
     }
 
-    fun getImmutableState() = ImmutableLeaderState(memberId, electionTerm, leaderId, raftState, lastHeartbeat)
+    fun getImmutableState() = ImmutableLeaderState(clusterId, memberId, electionTerm, leaderId, raftState, lastHeartbeat)
 
     fun newElectionTerm() {
         electionTerm += 1
     }
 
     fun setLeader(leader: String, term: Long) {
+        electionState = if(leader != "") {
+            ElectionState.IN_ELECTION
+        } else {
+            ElectionState.IN_CLUSTER
+        }
+
         raftState = if(leader == memberId) {
             RaftState.LEADER
         } else {
@@ -43,11 +53,8 @@ class LeaderStateMutable(
     fun shouldStartElection() = raftState == RaftState.FOLLOWER && (lastHeartbeat + ELECTION_TIMER_DELAY < System.currentTimeMillis())
 }
 
-enum class RaftState {
-    FOLLOWER, LEADER
-}
-
 data class ImmutableLeaderState(
+    val clusterId: Int,
     val memberId: String,
     val electionTerm: Long = 0L,
     val leaderId: String = "",

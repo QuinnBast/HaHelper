@@ -32,7 +32,6 @@ dependencies {
     // GRPC libs
     implementation(project(":HaHelperProto"))
     implementation("io.grpc:grpc-netty:1.33.1")
-    // implementation("io.grpc:grpc-netty-shaded:1.33.1")
 
     // Logger facade
     implementation("org.slf4j:slf4j-api:1.7.25")
